@@ -4,6 +4,10 @@ from transform import Transform
 from consulta import Consulta
 from streamlit_option_menu import option_menu
 from streamlit_kpi import streamlit_kpi
+from st_aggrid import AgGrid,GridUpdateMode
+from st_aggrid.grid_options_builder import GridOptionsBuilder
+from streamlit_elements import html, mui, elements
+import pandas as pd 
 import time 
 
 
@@ -18,6 +22,11 @@ data=transform.eliminarFechas(data);
 data=transform.cambiarFormatoFechas(data) 
 dataEstado=transform.ObtenerEstado(data)
 TareasTerminadas=consulta.CantidadTareasCompletadas(data); 
+
+
+with open('style.css') as f:
+    st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
 menu=option_menu( 
         menu_title=None, 
         options=["Tareas", "Dashboard"], 
@@ -34,12 +43,14 @@ menu=option_menu(
     )
 col1,col2=st.columns(2)
 if menu=="Tareas": 
-    st.empty()
+    
    
     with col1: 
-        streamlit_kpi(height="70",title="Tareas Completadas", value=str(TareasTerminadas), icon="fa-solid fa-check", 
-                      textAlign="center", backgroundColor="white", iconColor="green")
-    st.title("Tareas Pendientes", anchor=False)
+        
+        st.metric("Tareas completadas", value=TareasTerminadas)
+    with elements("new_element"): 
+       mui.Typography("Listas de Tareas",variant="h3", mt={4}, Type="left", fontSize="3rem", color="blue")
+    
     config= { 
         'FechaInicio':st.column_config.DateColumn('FechaInicio', format="DD/MM/YYYY"),
         'FechaTerminado':st.column_config.DateColumn('FechaTerminado', format="DD/MM/YYYY"), 
@@ -51,8 +62,21 @@ if menu=="Tareas":
     option=st.selectbox("Estado:", 
                         dataEstado, placeholder="Seleccione un Estado", index=None)
     data=consulta.FiltroPorEstado(data,option)
-    st.data_editor(data,column_config=config, hide_index=True, use_container_width=True, column_order=listaColumnas, 
-                num_rows="dynamic")
+
+    gd=GridOptionsBuilder.from_dataframe(data)
+    gd.configure_pagination(enabled=True, paginationAutoPageSize=False,paginationPageSize=10)
+    gd.configure_default_column(editable=False,groupable=True)
+    go=gd.build()
+    AgGrid(data, gridOptions=go, update_mode=GridUpdateMode.VALUE_CHANGED | GridUpdateMode.SELECTION_CHANGED | GridUpdateMode.FILTERING_CHANGED,
+           theme='material'
+           )
+    
+    
+    
+    
+    
+    
+    
 
 
 
